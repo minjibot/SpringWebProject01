@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bcle.mybatiscontroller.IClubSearchDAO">
+   
+   <select id="cateLname" resultType="String">
+      SELECT L_CAT
+      FROM CATEGORY_L
+      WHERE CATEGORY_L_ID = #{category_l_id}
+   </select>
+   
+   <select id="cateS_List" resultType="com.bcle.DTO.Category">
+      SELECT CATEGORY_L_ID, CATEGORY_S_ID, S_CAT
+      FROM CATEGORY_S 
+      WHERE CATEGORY_L_ID = #{category_l_id}
+   </select>
+   
+   <select id="cateL_List" resultType="com.bcle.DTO.Category">
+      SELECT CATEGORY_L_ID, L_CAT
+      FROM CATEGORY_L
+   </select>
+   
+   <select id="regionL_List" resultType="com.bcle.DTO.Region">
+      SELECT REGION_L_ID, CITY 
+      FROM REGION_L
+   </select>
+   
+   <select id="clubList" resultType="com.bcle.DTO.Club">
+      SELECT CID,URL,TITLE,CITY,LOCAL,COUNT,MAX,BDATE,AGELIMIT_ID,LIMIT_ID,MIN_AGE,MAX_AGE
+      FROM
+      (
+          SELECT ROWNUM AS RNUM, CLUB.*
+          FROM
+          (
+             SELECT *
+             FROM CLUB_VIEW
+             WHERE BDATE IS NOT NULL 
+             AND (STATUS_ID IS NULL OR STATUS_ID NOT IN ('3', '4'))
+             AND CATEGORY_L_ID = ${category_l_id}
+             <if test='category_s_id != ""'>
+                AND CATEGORY_S_ID = #{category_s_id}
+             </if>
+             <if test='region_l_id != ""'>
+                AND REGION_L_ID = #{region_l_id}
+             </if>
+             <if test='region_s_id != ""'>
+                AND REGION_S_ID = #{region_s_id}
+             </if>
+             <if test='keyword != ""'>
+                AND TITLE LIKE '%'||#{keyword}||'%'
+             </if>
+             ORDER BY BDATE ${sortOrder}
+          ) CLUB
+      )
+      <![CDATA[ WHERE RNUM >= ${start} AND RNUM <= ${end} ]]>
+   </select>
+   
+   <select id="clubCount" resultType="java.lang.Integer">
+      SELECT COUNT(*)
+      FROM
+      (
+          SELECT ROWNUM AS RNUM, CLUB.*
+          FROM
+          (
+             SELECT *
+             FROM CLUB_VIEW
+             WHERE BDATE IS NOT NULL 
+             AND (STATUS_ID IS NULL OR STATUS_ID NOT IN ('3', '4'))
+             AND CATEGORY_L_ID = ${category_l_id}
+             <if test='category_s_id != ""'>
+                AND CATEGORY_S_ID = #{category_s_id}
+             </if>
+             <if test='region_l_id != ""'>
+                AND REGION_L_ID = #{region_l_id}
+             </if>
+             <if test='region_s_id != ""'>
+                AND REGION_S_ID = #{region_s_id}
+             </if>
+             <if test='keyword != ""'>
+                AND TITLE LIKE '%'||#{keyword}||'%'
+             </if>
+             ORDER BY BDATE ${sortOrder}
+          ) CLUB
+      )
+   </select>
+   
+   <select id="preClubList" resultType="com.bcle.DTO.Club">
+      SELECT CID,URL,TITLE,DAY
+      FROM
+      (
+          SELECT ROWNUM AS RNUM, CLUB.*
+          FROM
+          (
+             SELECT *
+             FROM CLUB_VIEW
+             WHERE BDATE IS NULL 
+             <if test='category_l_id != ""'>
+                AND CATEGORY_L_ID = #{category_l_id}
+             </if>
+             <if test='category_s_id != ""'>
+                AND CATEGORY_S_ID = #{category_s_id}
+             </if>
+             <if test='region_l_id != ""'>
+                AND REGION_L_ID = #{region_l_id}
+             </if>
+             <if test='region_s_id != ""'>
+                AND REGION_S_ID = #{region_s_id}
+             </if>
+             <if test='keyword != ""'>
+                AND TITLE LIKE '%'||#{keyword}||'%'
+             </if>
+             ORDER BY PREOPENDATE ${sortOrder}
+          ) CLUB
+      )
+      <![CDATA[ WHERE RNUM >= ${start} AND RNUM <= ${end} ]]>
+   </select>
+   
+   <select id="preClubCount" resultType="java.lang.Integer">
+      SELECT COUNT(*)
+      FROM
+      (
+          SELECT ROWNUM AS RNUM, CLUB.*
+          FROM
+          (
+             SELECT *
+             FROM CLUB_VIEW
+             WHERE BDATE IS NULL 
+             <if test='category_l_id != ""'>
+                AND CATEGORY_L_ID = #{category_l_id}
+             </if>
+             <if test='category_s_id != ""'>
+                AND CATEGORY_S_ID = #{category_s_id}
+             </if>
+             <if test='region_l_id != ""'>
+                AND REGION_L_ID = #{region_l_id}
+             </if>
+             <if test='region_s_id != ""'>
+                AND REGION_S_ID = #{region_s_id}
+             </if>
+             <if test='keyword != ""'>
+                AND TITLE LIKE '%'||#{keyword}||'%'
+             </if>
+             ORDER BY PREOPENDATE ${sortOrder}
+          ) CLUB
+      )
+   </select>
+   
+   <select id="staffCnt" resultType="java.lang.Integer">
+      SELECT COUNT(*) AS COUNT 
+      FROM CLUBMEMBERLIST C LEFT JOIN JOIN_CLUB J 
+      ON C.JOIN_ID = J.JOIN_ID
+      WHERE CID= #{cid} AND C.POSITION_ID=3
+   </select>
+   
+   <select id="managerCnt" resultType="java.lang.Integer">
+      SELECT COUNT(*) AS COUNT 
+      FROM CLUBMEMBERLIST C LEFT JOIN JOIN_CLUB J 
+      ON C.JOIN_ID = J.JOIN_ID
+      WHERE CID= #{cid} AND C.POSITION_ID=3
+   </select>
+   
+   <delete id="delete">
+      DELETE FROM CLUB WHERE CID = #{cid}
+   </delete>
+   
+   <select id="clubSearchList" resultType="com.bcle.DTO.Club">
+      SELECT CID,URL,TITLE,CITY,LOCAL,COUNT,MAX,BDATE,AGELIMIT_ID,LIMIT_ID,MIN_AGE,MAX_AGE
+      FROM
+      (
+          SELECT ROWNUM AS RNUM, CLUB.*
+          FROM
+          (
+             SELECT *
+             FROM CLUB_VIEW
+             WHERE BDATE IS NOT NULL 
+             AND (STATUS_ID IS NULL OR STATUS_ID NOT IN ('3', '4'))
+             <if test='category_l_id != ""'>
+                AND CATEGORY_L_ID = #{category_l_id}
+             </if>
+             <if test='category_s_id != ""'>
+                AND CATEGORY_S_ID = #{category_s_id}
+             </if>
+             <if test='region_l_id != ""'>
+                AND REGION_L_ID = #{region_l_id}
+             </if>
+             <if test='region_s_id != ""'>
+                AND REGION_S_ID = #{region_s_id}
+             </if>
+             <if test='keyword != ""'>
+                AND TITLE LIKE '%'||#{keyword}||'%'
+             </if>
+             ORDER BY BDATE ${sortOrder}
+          ) CLUB
+      )
+      <![CDATA[ WHERE RNUM >= ${start} AND RNUM <= ${end} ]]>
+   </select>
+   
+   <select id="clubSearchCount" resultType="java.lang.Integer">
+      SELECT COUNT(*)
+      FROM
+      (
+          SELECT ROWNUM AS RNUM, CLUB.*
+          FROM
+          (
+             SELECT *
+             FROM CLUB_VIEW
+             WHERE BDATE IS NOT NULL 
+             AND (STATUS_ID IS NULL OR STATUS_ID NOT IN ('3', '4'))
+             <if test='category_l_id != ""'>
+                AND CATEGORY_L_ID = #{category_l_id}
+             </if>
+             <if test='category_s_id != ""'>
+                AND CATEGORY_S_ID = #{category_s_id}
+             </if>
+             <if test='region_l_id != ""'>
+                AND REGION_L_ID = #{region_l_id}
+             </if>
+             <if test='region_s_id != ""'>
+                AND REGION_S_ID = #{region_s_id}
+             </if>
+             <if test='keyword != ""'>
+                AND TITLE LIKE '%'||#{keyword}||'%'
+             </if>
+             ORDER BY BDATE ${sortOrder}
+          ) CLUB
+      )
+   
+   </select>
+   
+</mapper>

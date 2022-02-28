@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="com.bcle.mybatiscontroller.IMyInfoDAO">
+<!-- 인터페이스 있어야  -->
+
+	<select id="showMyInfo" resultType="com.bcle.DTO.MemberInfo">
+		SELECT MID, NAME, JOINDATE AS BDATE, LOGIN_DATE, ID , SSN , URL, AGE
+		, EMAIL, TEL, USERID, PWD, NICKNAME
+		, CATEGORYNAME
+		, CATEGORYNAME2
+		, CATEGORYNAME3
+		, CATEGORYNAME4
+		, CATEGORYNAME5
+        , ADD_CATEGORY_ID
+        , CATEGORYID2
+        , CATEGORYID3
+        , CATEGORYID4
+        , CATEGORYID5
+		, REGION_L_ID1
+		, REGIONNAME
+		, REGION_L_ID2
+		, REGIONNAME2
+		, REGION_L_ID3
+		, REGIONNAME3
+		FROM MEMBERINFO_VIEW3
+		WHERE ID = #{id}
+	</select>
+	
+	<select id="countEval" resultType="java.lang.Integer">
+		SELECT FN_COUNT_EVAL(#{id}, #{evalId})
+		FROM DUAL
+	</select>
+	
+	<select id="checkPwd" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MEMBERINFO
+		WHERE ID = #{id} AND PWD = #{pwd}
+	</select>
+	
+	<select id="regionLList" resultType="com.bcle.DTO.Region">
+		SELECT REGION_L_ID, CITY FROM REGION_L
+	</select>
+	
+	<select id="regionSList" resultType="com.bcle.DTO.Region">
+		SELECT REGION_S_ID,REGION_L_ID,LOCAL FROM REGION_S WHERE REGION_L_ID=#{region_l_id}
+	</select>
+	
+	<select id="categoryLList" resultType="com.bcle.DTO.Category">
+		SELECT CATEGORY_L_ID,L_CAT FROM CATEGORY_L
+	</select>
+	
+	<select id="categorySList" resultType="com.bcle.DTO.Category">
+		SELECT CATEGORY_L_ID, CATEGORY_S_ID, S_CAT FROM CATEGORY_S WHERE CATEGORY_L_ID = #{category_l_id}
+	</select>
+	
+	<update id="updateMemberInfo">
+		UPDATE MEMBERINFO
+		SET URL = #{url}, PWD = #{pwd}, NICKNAME = #{nickname}, REGION_S_ID = #{regionId1}
+		WHERE ID = #{id}
+	</update>
+	
+	<update id="updateMember">
+		UPDATE MEMBER
+		SET CATEGORY_S_ID = #{categoryId1}
+		WHERE MID = (SELECT MID FROM MEMBERINFO WHERE ID = #{id})
+	</update>
+	
+	<delete id="deleteAddRegion">
+		DELETE
+		FROM ADD_REGION
+		WHERE ID = #{id}
+	</delete>
+	
+	<delete id="deleteAddCategory">
+		DELETE 
+		FROM ADD_CATEGORY
+		WHERE MID = (SELECT MID FROM MEMBERINFO WHERE ID = #{id})
+	</delete>
+	
+	<insert id="insertAddRegion">
+		INSERT INTO ADD_REGION(ADD_REGION_ID, ID, REGION_S_ID) VALUES(ADD_REGIONSEQ.NEXTVAL, #{id}, #{region_s_id})
+	</insert>
+	
+	<insert id="insertAddCategory">
+		INSERT INTO ADD_CATEGORY(ADD_CATEGORY_ID, MID, CATEGORY_S_ID) 
+		VALUES(ADD_CATEGORYSEQ.NEXTVAL, (SELECT MID FROM MEMBERINFO WHERE ID = #{id}), #{category_S_Id})
+	</insert>
+</mapper>

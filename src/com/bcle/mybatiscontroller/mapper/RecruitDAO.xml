@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.bcle.mybatiscontroller.IRecruitDAO">
+<!-- 
+   <select id="list" resultType="com.bcle.DTO.Recruit">
+      SELECT RNUM,TITLE,NICKNAME,BDATE,CNT,B_ID,DAY,BDATE
+      FROM
+      (
+         SELECT ROWNUM AS RNUM,RECRUIT.*
+         FROM
+         (
+            SELECT CID,B_ID,CLUBMEM_ID,ID,NICKNAME,TITLE,CONTENT,POSITION_ID,POSITIONNAME,BDATE,CNT,DAY
+            FROM RECRUIT_BOARD_VIEW
+            WHERE CID = #{cid}
+            AND ~ #{sortOrder}
+            ORDER BY TO_NUMBER(B_ID)
+         )RECRUIT
+      )
+      ORDER BY RNUM DESC
+   </select>
+   
+ -->
+   <select id="lists" resultType="com.bcle.DTO.Recruit">
+      SELECT RNUM,TITLE,NICKNAME,BDATE,CNT,B_ID,DAY,BDATE
+      FROM
+      (
+         SELECT ROWNUM AS RNUM,RECRUIT.*
+         FROM
+         (
+            SELECT CID,B_ID,CLUBMEM_ID,ID,NICKNAME,TITLE,CONTENT,POSITION_ID,POSITIONNAME,BDATE,CNT,DAY
+            FROM RECRUIT_BOARD_VIEW
+            WHERE CID = #{cid}
+            <if test='sortOrder == "1"'>
+               AND STATUS NOT IN('마감','투표중')
+            </if>
+            <if test='sortOrder == "2"'>
+               AND STATUS = '투표중'
+            </if>
+            ORDER BY TO_NUMBER(B_ID) DESC
+         )RECRUIT
+      )
+      <![CDATA[ WHERE RNUM >= #{start} AND RNUM <= #{end} ]]>
+   </select>
+    
+
+
+   <select id="listCount" resultType="java.lang.Integer">
+      SELECT COUNT(*)
+      FROM
+      (
+         SELECT ROWNUM AS RNUM,RECRUIT.*
+         FROM
+         (
+            SELECT CID,B_ID,CLUBMEM_ID,ID,NICKNAME,TITLE,CONTENT,POSITION_ID,POSITIONNAME,BDATE,CNT
+            FROM RECRUIT_BOARD_VIEW
+            WHERE CID = #{cid}
+            <if test='sortOrder == "1"'>
+               AND STATUS NOT IN('마감','투표중')
+            </if>
+            <if test='sortOrder == "2"'>
+               AND STATUS = '투표중'
+            </if>
+            ORDER BY TO_NUMBER(B_ID)
+         )RECRUIT
+      )
+      ORDER BY RNUM DESC
+   </select>
+   
+   
+   <select id="positionCheck" resultType="java.lang.String">
+      SELECT POSITION_ID
+      FROM CLUBMEMBERLIST_VIEW
+      WHERE ID = #{id} AND CID = #{cid}
+   </select>
+   
+   <select id="searchClubmemId" resultType="java.lang.String">
+      SELECT CLUBMEM_ID
+      FROM CLUBMEMBERLIST_VIEW
+      WHERE ID = #{id} AND CID = #{cid}
+   </select>
+   
+   <insert id="add">
+      INSERT INTO RECRUIT_BOARD(B_ID, CLUBMEM_ID, TITLE, CONTENT, POSITION_ID)
+      VALUES(RECRUIT_BOARDSEQ.NEXTVAL,#{clubmem_id},#{title},#{content},#{position_id})
+   </insert>
+   
+   <select id="showRecruit" resultType="com.bcle.DTO.Recruit">
+      SELECT CID,TITLE,DAY,NICKNAME,ID,BDATE,POSITION_ID
+      ,CNT,POSITIONNAME,CONTENT,B_ID,MOTION_ID,VOTEDDAY,VOLUNTEER_COUNT,VOTE_COUNT
+      FROM RECRUIT_BOARD_VIEW
+      WHERE B_ID = #{b_id}
+   </select>
+   
+   <update id="updateCnt">
+      UPDATE RECRUIT_BOARD
+      SET CNT = CNT + 1
+      WHERE B_ID = #{b_id}
+    </update>
+    
+    <update id="modify">
+       UPDATE RECRUIT_BOARD
+      SET TITLE = #{title} , CONTENT = #{content}
+      WHERE B_ID = #{b_id}
+    </update>
+   
+   <delete id="delete">
+      DELETE 
+      FROM RECRUIT_BOARD
+      WHERE B_ID = #{b_id}
+   </delete>
+   
+   <select id="volunteerList" resultType="com.bcle.DTO.Volunteer">
+      SELECT NICKNAME,ID,URL,VOLUNTEER_ID <!-- VOLUNTEER_ID도 뽑아내야할듯. -->
+      FROM VOLUNTEER_VIEW
+      WHERE B_ID = #{b_id}
+      ORDER BY BDATE
+   </select>
+   
+   <insert id="apply">
+      INSERT INTO VOLUNTEER(VOLUNTEER_ID,B_ID,CLUBMEM_ID,BDATE) 
+      VALUES(VOLUNTEERSEQ.NEXTVAL,#{b_id},#{clubmem_id},SYSDATE)
+   </insert>
+   
+   <delete id="cancle">
+      DELETE
+      FROM VOLUNTEER
+      WHERE B_ID = #{b_id} AND CLUBMEM_ID = #{clubmem_id}
+   </delete>
+   
+   <select id="applyCheck" resultType="java.lang.Integer">
+      SELECT COUNT(*)
+      FROM VOLUNTEER_VIEW
+      WHERE B_ID = #{b_id} AND ID=#{id}
+   </select>
+   
+   <select id="motionVoteCheck" resultType="java.lang.Integer">
+      SELECT COUNT(*)
+      FROM MOTION_VOTE
+      WHERE B_ID = #{b_id}
+   </select>
+   
+   <insert id="motionVoteInsert">
+      INSERT INTO MOTION_VOTE(MOTION_ID,B_ID,BDATE) 
+      VALUES(MOTION_VOTESEQ.NEXTVAL,#{b_id},TO_DATE(#{bdate}) + 7)
+   </insert>
+   
+   <insert id="exeVote">
+      INSERT INTO EXE_VOTE(EXE_VOTE_ID,BDATE,VOLUNTEER_ID,CLUBMEM_ID,MOTION_ID) 
+      VALUES(EXE_VOTESEQ.NEXTVAL, SYSDATE,#{volunteer_id},#{clubmem_id},#{motion_id})
+   </insert>
+   
+   <select id="exeVoteCheck" resultType="java.lang.Integer">
+      SELECT COUNT(*)
+      FROM EXE_VOTE
+      WHERE CLUBMEM_ID=#{clubmem_id} AND MOTION_ID = #{motion_id}
+   </select>
+   
+   <select id="exeVoteVolunteerId" resultType="java.lang.String">
+      SELECT VOLUNTEER_ID
+      FROM EXE_VOTE
+      WHERE CLUBMEM_ID=#{clubmem_id} AND MOTION_ID = #{motion_id}
+   </select>
+   
+   <select id="exeVoteVolunteer" resultType="java.lang.String">
+      SELECT NICKNAME
+      FROM VOLUNTEER_VIEW
+      WHERE VOLUNTEER_ID = #{volunteer_id}
+   </select>
+   
+   <delete id="exeVoteCancle">
+      DELETE 
+      FROM EXE_VOTE
+      WHERE CLUBMEM_ID = #{clubmem_id} AND MOTION_ID = #{motion_id}
+   </delete>
+   
+   <select id="selectWinner" resultType="com.bcle.DTO.Volunteer">
+      SELECT VOLUNTEER_ID
+     , (SELECT CLUBMEM_ID FROM VOLUNTEER WHERE VOLUNTEER_ID = Q.VOLUNTEER_ID) AS CLUBMEM_ID
+     , FN_VOLUNTEER_ID(VOLUNTEER_ID) AS ID
+     , FN_VOLUNTEER_MID(VOLUNTEER_ID) AS MID
+     , FN_VOLUNTEER_NICKNAME(VOLUNTEER_ID) AS NICKNAME
+     , FN_VOLUNTEER_URL(VOLUNTEER_ID) AS URL
+   FROM 
+   (
+       SELECT T.*, RANK() OVER (ORDER BY COUNT DESC,BDATE) AS RANK
+       FROM
+       (
+       SELECT E.VOLUNTEER_ID,COUNT(*) AS COUNT
+             ,(SELECT BDATE FROM VOLUNTEER WHERE VOLUNTEER_ID = E.VOLUNTEER_ID) AS BDATE
+       FROM EXE_VOTE E LEFT JOIN VOLUNTEER V
+       ON E.VOLUNTEER_ID = V.VOLUNTEER_ID
+       WHERE MOTION_ID = #{motion_id}
+       GROUP BY E.VOLUNTEER_ID
+       )T
+   )Q
+   WHERE RANK = 1
+   </select>
+   
+   <select id="selectWinner2" resultType="com.bcle.DTO.Volunteer">
+      SELECT VOLUNTEER_ID,B_ID,CLUBMEM_ID,NICKNAME,ID,URL,CID,MID
+      FROM VOLUNTEER_VIEW
+      WHERE BDATE = (SELECT MIN(BDATE) 
+                     FROM VOLUNTEER_VIEW 
+                     WHERE B_ID = #{b_id})
+      AND B_ID = #{b_id}
+   </select>
+   
+   <select id="profileInfo" resultType="com.bcle.DTO.MemberInfo">
+      SELECT URL,NICKNAME, AGE
+          ,REGIONNAME, REGIONNAME2, REGIONNAME3 
+      FROM MEMBERINFO_VIEW2 
+      WHERE ID = #{id}
+   </select>
+   
+   <select id="profileClub" resultType="com.bcle.DTO.Club">
+      SELECT S_CAT,TITLE, CID 
+      FROM CLUB_VIEW 
+      WHERE BDATE IS NOT NULL 
+      AND ID = #{id}
+   </select>
+   
+   <select id="profileEval" resultType="com.bcle.DTO.MemberEval">
+      SELECT COUNT(*) AS COUNT ,CONTENT
+      FROM MEMBEREVAL_VIEW
+      WHERE ID = #{id}
+      GROUP BY CONTENT
+   </select>
+   
+   <update id="positionUpdate">
+      UPDATE CLUBMEMBERLIST
+      SET POSITION_ID = #{position_id}
+      WHERE CLUBMEM_ID = #{clubmem_id}
+   </update>
+   
+</mapper>

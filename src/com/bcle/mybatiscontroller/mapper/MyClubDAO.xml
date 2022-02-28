@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="com.bcle.mybatiscontroller.IMyClubDAO">
+<!-- 인터페이스 있어야  -->
+
+	<select id="myClubActive" resultType="com.bcle.DTO.Club">
+		SELECT DISTINCT CID, MAX, BDATE, CONTENT, CATEGORY_S_ID, S_CAT, REGION_S_ID, LOCAL, MID, URL, TITLE, PREOPENDATE, AGELIMIT_ID, LIMIT_ID, ID, STATUS_ID, POSITION_ID
+		FROM MYCLUBVIEW
+		WHERE ID = #{id}
+	</select>
+	
+	<select id="myClubClosed" resultType="com.bcle.DTO.Club">
+		SELECT CID, MAX, BDATE, CONTENT, CATEGORY_S_ID, S_CAT, REGION_S_ID, LOCAL, MID, URL, TITLE, PREOPENDATE, AGELIMIT_ID, LIMIT_ID, ID, STATUS_ID, POSITION_ID
+		FROM MYCLOSEDCLUBVIEW
+		WHERE ID = #{id} AND STATUS_ID LIKE '3'
+	</select>
+	
+	<select id="getClubJoin" resultType="com.bcle.DTO.Club">
+		SELECT CID, MAX, BDATE, CONTENT, CATEGORY_S_ID, S_CAT, REGION_S_ID, LOCAL, MID, URL, TITLE, PREOPENDATE, AGELIMIT_ID, LIMIT_ID, ID, STATUS_ID, POSITION_ID, JOINDATE
+		FROM GETJOINCLUBVIEW
+		WHERE ID = #{id}
+	</select>
+	
+	<select id="getClubPreOpen" resultType="com.bcle.DTO.Club">
+		SELECT CID, MAX, BDATE, CONTENT, CATEGORY_S_ID, S_CAT, REGION_S_ID, LOCAL, MID, URL, TITLE, PREOPENDATE, AGELIMIT_ID, LIMIT_ID
+		FROM GETPREOPENCLUBVIEW
+		WHERE MID = (SELECT MID FROM MEMBERINFO WHERE ID = #{id})
+	</select>
+
+	<select id="getMyPageCal" resultType="com.bcle.DTO.Bee">
+		SELECT BEE_ID AS BEEID, SUBSTR(BEETIME, 1, 10) AS BEETIME, TITLE, CID
+		FROM ACTIVECLUBBEEVIEW
+		WHERE SUBSTR(BEETIME, 1, 4) LIKE #{year} AND SUBSTR(BEETIME, 6, 2) LIKE #{month}
+		AND CID = #{cid}
+		AND (BEE_ID IN (SELECT BEE_ID
+                    	FROM BEE_REQ 
+                    	WHERE REQ_ID NOT IN (SELECT REQ_ID FROM ABSENT) 
+                                		AND CLUBMEM_ID = (SELECT CLUBMEM_ID
+                                                            FROM JOIN_CLUB JC LEFT JOIN CLUBMEMBERLIST CL
+                                                            ON JC.JOIN_ID = CL.JOIN_ID
+                                                            WHERE CID = #{cid} AND MID = (SELECT MID FROM MEMBERINFO WHERE ID = #{id})
+                                                            AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM BAN_MEM_LIST)
+                                                            AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM DROP_CLUB) AND CLUBMEM_ID IS NOT NULL)) 
+		AND MIN &lt; REQCNT)
+		OR (CID = #{cid} AND SUBSTR(BEETIME, 1, 4) LIKE #{year} AND SUBSTR(BEETIME, 6, 2) LIKE #{month} AND TO_DATE(SUBSTR(BEETIME, 1, 10), 'RR/MM/DD') > TO_DATE(SYSDATE, 'RR/MM/DD'))
+	</select>
+	
+	<select id="getMyPageTotalCal" resultType="com.bcle.DTO.Bee">
+		SELECT BEE_ID AS BEEID, SUBSTR(BEETIME, 1, 10) AS BEETIME, TITLE, CID
+		FROM ACTIVECLUBBEEVIEW
+		WHERE SUBSTR(BEETIME, 1, 4) LIKE #{year} AND SUBSTR(BEETIME, 6, 2) = #{month}
+		AND (BEE_ID IN (SELECT BEE_ID
+                    	FROM BEE_REQ 
+                    	WHERE REQ_ID NOT IN (SELECT REQ_ID FROM ABSENT) 
+                                	AND CLUBMEM_ID IN (SELECT CLUBMEM_ID
+                                                            FROM JOIN_CLUB JC LEFT JOIN CLUBMEMBERLIST CL
+                                                            ON JC.JOIN_ID = CL.JOIN_ID
+                                                            WHERE MID = (SELECT MID FROM MEMBERINFO WHERE ID = #{id})
+                                                            AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM BAN_MEM_LIST)
+                                                            AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM DROP_CLUB) AND CLUBMEM_ID IS NOT NULL))
+		AND MIN &lt; REQCNT)
+		OR (SUBSTR(BEETIME, 1, 4) LIKE #{year} AND SUBSTR(BEETIME, 6, 2) = #{month} AND TO_DATE(SUBSTR(BEETIME, 1, 10), 'RR/MM/DD') > TO_DATE(SYSDATE, 'RR/MM/DD')
+		AND BEE_ID IN (SELECT BEE_ID
+                    FROM BEE_REQ 
+                    WHERE REQ_ID NOT IN (SELECT REQ_ID FROM ABSENT))
+        AND CID IN (SELECT CID
+                        FROM JOIN_CLUB JC LEFT JOIN CLUBMEMBERLIST CL
+                        ON JC.JOIN_ID = CL.JOIN_ID 
+                        WHERE  MID = (SELECT MID FROM MEMBERINFO WHERE ID = #{id})
+                        AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM BAN_MEM_LIST)
+                                                                                    AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM DROP_CLUB)))
+	</select>
+	
+	<select id="getMyPageCalClosed" resultType="com.bcle.DTO.Bee">
+		SELECT BEE_ID AS BEEID, SUBSTR(BEETIME, 1, 10) AS BEETIME, TITLE, CID
+		FROM CLOSEDCLUBBEEVIEW
+		WHERE SUBSTR(BEETIME, 1, 4) LIKE #{year} AND SUBSTR(BEETIME, 6, 2) LIKE #{month}
+		AND CID = #{cid}
+		AND (BEE_ID IN (SELECT BEE_ID
+                    	FROM BEE_REQ 
+                    	WHERE REQ_ID NOT IN (SELECT REQ_ID FROM ABSENT) 
+                                		AND CLUBMEM_ID = (SELECT CLUBMEM_ID
+                                                            FROM JOIN_CLUB JC LEFT JOIN CLUBMEMBERLIST CL
+                                                            ON JC.JOIN_ID = CL.JOIN_ID
+                                                            WHERE CID = #{cid} AND MID = (SELECT MID FROM MEMBERINFO WHERE ID = #{id})
+                                                            AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM BAN_MEM_LIST)
+                                                            AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM DROP_CLUB))) 
+		AND MIN &lt; REQCNT)
+	</select>
+	
+	<select id="getMyPageTotalCalClosed" resultType="com.bcle.DTO.Bee">
+		SELECT BEE_ID AS BEEID, SUBSTR(BEETIME, 1, 10) AS BEETIME, TITLE, CID
+		FROM CLOSEDCLUBBEEVIEW
+		WHERE SUBSTR(BEETIME, 1, 4) LIKE #{year} AND SUBSTR(BEETIME, 6, 2) = #{month}
+		AND (BEE_ID IN (SELECT BEE_ID
+                    	FROM BEE_REQ 
+                    	WHERE REQ_ID NOT IN (SELECT REQ_ID FROM ABSENT) 
+                                	AND CLUBMEM_ID IN (SELECT CLUBMEM_ID
+                                                            FROM JOIN_CLUB JC LEFT JOIN CLUBMEMBERLIST CL
+                                                            ON JC.JOIN_ID = CL.JOIN_ID
+                                                            WHERE MID = (SELECT MID FROM MEMBERINFO WHERE ID = #{id})
+                                                            AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM BAN_MEM_LIST)
+                                                            AND CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM DROP_CLUB)))
+		AND MIN &lt; REQCNT)
+	</select>
+</mapper>

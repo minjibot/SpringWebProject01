@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="com.bcle.mybatiscontroller.IMyAdminDAO">
+<!-- 인터페이스 있어야  -->
+
+	<select id="memberList" resultType="com.bcle.DTO.MemberInfo">
+		SELECT NUM, USERID, NAME, EMAIL, NICKNAME, BDATE, LOGIN_DATE
+		FROM (SELECT ROWNUM AS NUM, T.* 
+		
+		        FROM (
+		            SELECT MI.ID, MI.USERID, MI.NAME, MI.EMAIL, MI.NICKNAME, M.BDATE, M.LOGIN_DATE
+		            FROM  MEMBERINFO MI LEFT JOIN MEMBER M
+		            ON M.MID = MI.MID
+		            ORDER BY M.BDATE
+		            ) T
+		) 
+		WHERE NUM &gt;(#{start}-1) AND NUM &lt;(#{end}+1)
+		ORDER BY NUM DESC
+	</select>
+	
+	<select id="searchMemberList" resultType="com.bcle.DTO.MemberInfo">
+		SELECT NUM, USERID, NAME, EMAIL, NICKNAME, BDATE, LOGIN_DATE
+		FROM (SELECT ROWNUM AS NUM, T.* 
+		
+		        FROM (
+		            SELECT MI.ID, MI.USERID, MI.NAME, MI.EMAIL, MI.NICKNAME, M.BDATE, M.LOGIN_DATE
+		            FROM  MEMBERINFO MI LEFT JOIN MEMBER M
+		            ON M.MID = MI.MID
+		            WHERE ${select} LIKE '%'||#{inputValue}||'%'
+		            ORDER BY M.BDATE
+		            ) T
+		) 
+		WHERE NUM &gt;(#{start}-1) AND NUM &lt;(#{end}+1)
+		ORDER BY NUM DESC
+	</select>
+	
+	<select id="countMember" resultType="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM  MEMBERINFO MI LEFT JOIN MEMBER M
+		ON M.MID = MI.MID
+	</select>
+	
+	<select id="countSearchMember" resultType="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM  MEMBERINFO MI LEFT JOIN MEMBER M
+		ON M.MID = MI.MID
+		WHERE ${select} LIKE '%'||#{inputValue}||'%'
+	</select>
+	
+	<select id="sortClubList" resultType="com.bcle.DTO.Club">
+		SELECT NUM, S_CAT, TITLE, LOCAL, BDATE, COUNT
+		FROM (SELECT ROWNUM AS NUM, T.* 
+		        FROM (
+		        SELECT DISTINCT C.CID
+		        , (SELECT S_CAT FROM CATEGORY_S WHERE CATEGORY_S_ID = C.CATEGORY_S_ID) AS S_CAT
+		        , RL.CITY || ' ' || S.LOCAL AS LOCAL
+		        , C.TITLE
+		        , C.BDATE
+		        , (SELECT COUNT FROM CLUBMEM_COUNT_VIEW WHERE CID = C.CID) "COUNT"
+		        FROM CLUB C LEFT JOIN JOIN_CLUB J 
+		        ON C.CID = J.CID
+		            LEFT JOIN CLUBMEMBERLIST L    
+		            ON J.JOIN_ID = L.JOIN_ID
+		                LEFT JOIN REGION_S S
+		                ON S.REGION_S_ID = C.REGION_S_ID
+		                    LEFT JOIN REGION_L RL
+		                    ON S.REGION_L_ID = RL.REGION_L_ID
+		                        LEFT JOIN POSITION P
+		                        ON L.POSITION_ID = P.POSITION_ID
+		        WHERE C.BDATE IS NOT NULL
+		        ORDER BY ${sort}
+		        ) T
+		) 
+		WHERE NUM &gt;(#{start}-1) AND NUM &lt;(#{end}+1)
+		ORDER BY NUM DESC
+	</select>
+	
+	<select id="countClub" resultType="java.lang.Integer">
+		SELECT COUNT(DISTINCT C.CID) COUNT
+		        FROM CLUB C LEFT JOIN JOIN_CLUB J 
+		        ON C.CID = J.CID
+		            LEFT JOIN CLUBMEMBERLIST L    
+		            ON J.JOIN_ID = L.JOIN_ID
+		                LEFT JOIN REGION_S S
+		                ON S.REGION_S_ID = C.REGION_S_ID
+		                    LEFT JOIN REGION_L RL
+		                    ON S.REGION_L_ID = RL.REGION_L_ID
+		                        LEFT JOIN POSITION P
+		                        ON L.POSITION_ID = P.POSITION_ID
+		WHERE C.BDATE IS NOT NULL
+	</select>
+</mapper>

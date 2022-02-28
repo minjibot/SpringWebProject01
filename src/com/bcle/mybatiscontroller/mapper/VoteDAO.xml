@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+<mapper namespace="com.bcle.mybatiscontroller.IVoteDAO">
+
+
+	<select id="suspectList" resultType="com.bcle.DTO.Vote">
+		SELECT NICKNAME, P.NAME
+		FROM CLUBMEMBERLIST CM
+		LEFT JOIN POSITION P ON P.POSITION_ID = CM.POSITION_ID
+		LEFT JOIN JOIN_CLUB JC ON JC.JOIN_ID = CM.JOIN_ID
+		LEFT JOIN MEMBER M ON M.MID = JC.MID
+		LEFT JOIN MEMBERINFO MI ON M.MID = MI.MID
+		LEFT JOIN CLUB C ON C.CID = JC.CID
+		WHERE P.POSITION_ID NOT IN ('4') AND C.CID = #{cid}
+		AND CM.CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM BAN_MEM_LIST)
+		AND CM.CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM DROP_CLUB)
+		AND CM.CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID
+		FROM VOTE_BOARD
+		WHERE TO_NUMBER(TO_DATE(SYSDATE,'YYYY-MM-DD')-TO_DATE(BDATE,'YYYY-MM-DD')) &lt; 4)
+	</select>
+
+   <insert id="insertSuspectList">
+      INSERT INTO VOTE_BOARD(B_ID, VOTE_ID, WRITER, CLUBMEM_ID, CNT, BDATE, TITLE, CONTENT) 
+      VALUES(VOTE_BOARDSEQ.NEXTVAL, #{type}, FN_ID_TO_CLUBMEMBER_ID(#{id}, #{cid}), FN_CLUBMEMBER_NICKNAME_TO_ID(#{realsuspect}, #{cid}), 0, SYSDATE, #{title}, #{content})
+   </insert>
+   
+   <insert id="insertSuspectList2">
+      INSERT INTO VOTE_BOARD(B_ID, VOTE_ID, WRITER, CLUBMEM_ID, CNT, BDATE, TITLE, CONTENT) 
+      VALUES(VOTE_BOARDSEQ.NEXTVAL, #{type}, FN_ID_TO_CLUBMEMBER_ID(#{id}, #{cid}), FN_ID_TO_CLUBMEMBER_ID(#{id}, #{cid}), 0, SYSDATE, #{title}, #{content})
+   </insert>
+
+   <select id="suspecterInformation" resultType="com.bcle.DTO.Vote">
+      SELECT VT.TYPE,V.TITLE,FN_CLUBMEMBER_NICKNAME(V.CLUBMEM_ID) AS SUSPECT, V.CONTENT,  TO_CHAR(TO_DATE(SYSDATE,'YYYY-MM-DD')-TO_DATE(V.BDATE,'YYYY-MM-DD')) AS DDATE
+      ,TO_CHAR(FN_AGREE_PERCENT(#{bid})) AS PERCENT
+      FROM VOTE_BOARD V
+      LEFT JOIN CLUBMEMBERLIST CM ON V.WRITER = CM.CLUBMEM_ID
+      LEFT JOIN JOIN_CLUB JC ON CM.JOIN_ID = JC.JOIN_ID
+      LEFT JOIN MEMBER M ON JC.MID = M.MID
+      LEFT JOIN MEMBERINFO MI ON MI.MID = M.MID
+      LEFT JOIN CLUB C ON C.CID = JC.CID
+      LEFT JOIN VOTE_TYPE VT ON V.VOTE_ID = VT.VOTE_ID
+      WHERE C.CID = #{cid} AND V.B_ID=#{bid} 
+   </select>
+
+	<select id="voterlist" resultType="com.bcle.DTO.Vote">
+		SELECT FN_CLUBMEMBER_NICKNAME(V.CLUBMEM_ID) AS VOTER
+		FROM VOTER V
+		LEFT JOIN VOTE_BOARD VB ON V.B_ID = VB.B_ID
+		LEFT JOIN CLUBMEMBERLIST CM ON V.CLUBMEM_ID = CM.CLUBMEM_ID
+		LEFT JOIN JOIN_CLUB JC ON JC.JOIN_ID = CM.JOIN_ID
+		LEFT JOIN CLUB C ON JC.CID = C.CID
+		WHERE CM.CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID FROM BAN_MEM_LIST) AND
+		VB.B_ID = #{bid}
+		ORDER BY VB.B_ID
+	</select>
+
+	<select id="devoterlist" resultType="com.bcle.DTO.Vote">
+		SELECT NICKNAME, P.NAME
+		FROM CLUBMEMBERLIST CM
+		LEFT JOIN POSITION P ON P.POSITION_ID = CM.POSITION_ID
+		LEFT JOIN JOIN_CLUB JC ON JC.JOIN_ID = CM.JOIN_ID
+		LEFT JOIN MEMBER M ON M.MID = JC.MID
+		LEFT JOIN MEMBERINFO MI ON M.MID = MI.MID
+		LEFT JOIN CLUB C ON C.CID = JC.CID
+		WHERE P.POSITION_ID IN ('3','2') AND C.CID = #{cid}
+		AND CM.CLUBMEM_ID NOT IN (SELECT
+		CLUBMEM_ID FROM BAN_MEM_LIST)
+		AND CM.CLUBMEM_ID NOT IN (SELECT
+		CLUBMEM_ID FROM DROP_CLUB)
+		AND CM.CLUBMEM_ID NOT IN (SELECT CLUBMEM_ID
+		FROM VOTE_BOARD
+		WHERE
+		TO_NUMBER(TO_DATE(SYSDATE,'YYYY-MM-DD')-TO_DATE(BDATE,'YYYY-MM-DD')) &lt; 4)
+	</select>
+
+   <!-- 동아리페이징 처리 
+   1. 투표 게시판 게시물 수 구하기 : 전체 개수 보여주기 위한 것 
+   2. 모임리스트 출력 : 1~10개 한 페이지에 보여주는 개수를 위한 것
+    -->
+   
+   <!-- 1.투표 게시판 게시물 수 구하기  -->
+   <select id="votetotaldata" resultType="java.lang.Integer">
+      SELECT COUNT(*)
+      FROM VOTE_BOARD VB
+      LEFT JOIN CLUBMEMBERLIST CM ON VB.CLUBMEM_ID = CM.CLUBMEM_ID
+      LEFT JOIN JOIN_CLUB JC ON CM.JOIN_ID = JC.JOIN_ID
+      LEFT JOIN CLUB C ON C.CID = JC.CID
+      WHERE C.CID=#{cid}
+   </select>
+
+   <!-- 2. 모임리스트 출력 : 1~10개 한 페이지에 보여주는 개수를 위한 것 -->
+   <select id="votepagelist" resultType="com.bcle.DTO.Vote">
+      SELECT NUM, BID, TITLE, NICKNAME, SUSPECT,BDATE, CDATE, CNT, TYPE
+      FROM(SELECT ROWNUM AS NUM, T.*
+      FROM (SELECT TO_NUMBER(V.B_ID) AS BID, V.TITLE, MI.NICKNAME, FN_CLUBMEMBER_NICKNAME(V.CLUBMEM_ID) AS SUSPECT, TO_CHAR(V.BDATE) AS BDATE,TO_CHAR(V.BDATE+3) AS CDATE, V.CNT, VT.TYPE
+      FROM VOTE_BOARD V
+      LEFT JOIN CLUBMEMBERLIST CM ON V.WRITER = CM.CLUBMEM_ID
+      LEFT JOIN JOIN_CLUB JC ON CM.JOIN_ID = JC.JOIN_ID
+      LEFT JOIN MEMBER M ON JC.MID = M.MID
+      LEFT JOIN MEMBERINFO MI ON MI.MID = M.MID
+      LEFT JOIN CLUB C ON C.CID = JC.CID
+      LEFT JOIN VOTE_TYPE VT ON V.VOTE_ID = VT.VOTE_ID
+      WHERE C.CID = #{cid}
+      ORDER BY TO_NUMBER(V.B_ID) DESC) T)
+      WHERE NUM BETWEEN #{start} AND #{end}
+   </select>
+   
+   <!-- 동아리장일 경우에 버튼 만들기 위한 쿼리문 -->
+   <select id="checkvotebutton" resultType="java.lang.Integer">
+      SELECT COUNT(*) AS COUNT
+      FROM CLUBMEMBER_SHOW_ENG_VIEW
+      WHERE CID = #{cid} AND CLUBMEM_ID = FN_ID_TO_CLUBMEMBER_ID(#{id}, #{cid}) AND POSITION_ID = '4'
+   </select>
+
+	<select id="getCid" resultType="java.lang.String">
+		SELECT FN_CID_TO_BID('1') AS CID
+		FROM DUAL
+	</select>
+	
+	<insert id="insertBanMemList">
+		INSERT INTO BAN_MEM_LIST (BAN_MEM_ID, CLUBMEM_ID, BDATE) 
+		VALUES (BAN_MEM_LISTSEQ.NEXTVAL, #{clubmem_id}, SYSDATE)
+	</insert>
+	
+	<update id="updatePosition">
+		UPDATE CLUBMEMBERLIST
+		SET POSITION_ID = '1'
+		WHERE CLUBMEM_ID = #{clubmem_id}
+	</update>
+	
+	<insert id="insertClubStatus">
+		INSERT INTO CLUBSTATUS (CLUBSTATUS_ID, CID, STATUS_ID, BDATE) 
+		VALUES (CLUBSTATUSSEQ.NEXTVAL, #{cid}, '3', SYSDATE)
+	</insert>
+	
+	<!-- nickname랑 CID로 CLUBMEM_ID 얻어오기 -->
+	<select id="getClubMem_id" resultType="java.lang.String">
+		SELECT FN_ID_TO_CLUBMEMBER_ID((SELECT ID FROM MEMBERINFO WHERE NICKNAME = #{nickname}), #{cid})
+		FROM DUAL
+	</select>
+	
+	<!-- ID랑 CID로 CLUBMEM_ID 얻어오기 -->
+	<select id="getClubMem_id2" resultType="java.lang.String">
+		SELECT FN_ID_TO_CLUBMEMBER_ID(#{id}, #{cid})
+		FROM DUAL
+	</select>
+	
+	<select id="checkClosedClub" resultType="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM CLUBSTATUS
+		WHERE CID = #{cid} AND STATUS_ID = '3'
+	</select>
+	
+	<select id="checkPosition" resultType="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM CLUBMEMBERLIST
+		WHERE POSITION_ID = '1' AND CLUBMEM_ID = FN_ID_TO_CLUBMEMBER_ID((SELECT ID FROM MEMBERINFO WHERE NICKNAME = #{nickname}), #{cid})
+	</select>
+	
+	<select id="checkEliminated" resultType="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM BAN_MEM_LIST
+		WHERE CLUBMEM_ID = FN_ID_TO_CLUBMEMBER_ID((SELECT ID FROM MEMBERINFO WHERE NICKNAME = #{nickname}), #{cid})
+	</select>
+	
+	<!-- 찬반 insert -->
+	<insert id="insertPac">
+		INSERT INTO VOTER (VOTER_ID, B_ID, CLUBMEM_ID, BDATE, PAC_ID) 
+		VALUES (VOTERSEQ.NEXTVAL, #{bid}, FN_ID_TO_CLUBMEMBER_ID(#{id}, #{cid}), SYSDATE, #{pacId})
+	</insert>
+	
+	<!-- 찬반 delete -->
+	<delete id="deletePac">
+		DELETE
+		FROM VOTER
+		WHERE B_ID = #{bid} AND CLUBMEM_ID = #{clubmem_id}
+	</delete>
+	
+	<!-- 투표 여부 -->
+	<select id="checkVote" resultType="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM VOTER
+		WHERE B_ID = #{bid} AND CLUBMEM_ID = #{clubmem_id}
+	</select>
+</mapper>
